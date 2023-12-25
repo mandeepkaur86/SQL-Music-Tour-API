@@ -1,17 +1,17 @@
 // DEPENDENCIES
 const bands = require('express').Router()
-const{ Op } =require('sequelize')
+const { Op } = require('sequelize')
 const db = require('../models')
-const { Band } = db
+const { Band, MeetGreet, Event } = db
 
-// FIND ALL BANDS
+// (index) FIND ALL BANDS
 bands.get('/', async (req, res) => {
   try {
     const foundBands = await Band.findAll({
-    order:[['available_start_time', 'ASC']],
-    where: {
-      name:{ [ Op.like ]: `%${req.query.name ? req.query.name : ''}%`}
-    }
+      order: [['available_start_time', 'ASC']],
+      where: {
+        name: { [Op.like]: `%${req.query.name ? req.query.name : ''}%`}
+      }
     })
     res.status(200).json(foundBands)
   }
@@ -20,11 +20,29 @@ bands.get('/', async (req, res) => {
   }
 })
 
-// FIND A SPECIFIC BAND
-bands.get('/:id', async (req, res) => {
+// (show) FIND A SPECIFIC BAND
+bands.get('/:name', async (req, res) => {
   try {
     const foundBand = await Band.findOne({
-      where: {band_id: req.params.id}
+      where: {name: req.params.name},
+      include: [
+        {
+          model: MeetGreet,
+          as: 'meet_greets',
+          include: { 
+            model: Event, as: 'event',
+            where: { name: { [Op.like]: `%${req.query.event ? req.query.event : ''}%` } } 
+          }
+        },
+        {
+          model: setTime,
+          as: 'set_times',
+          include: { 
+            model: Event, as: 'event',
+            where: { name: { [Op.like]: `%${req.query.event ? req.query.event : ''}%` } }
+          }
+        }
+      ]
     })
     res.status(200).json(foundBand)
   }
@@ -46,6 +64,15 @@ bands.post('/', async (req, res) => {
     res.status(500).json(error)
   }
 })
+// syntax to create a band
+// // {
+// //   "name": "The Test",
+// //   "genre": "Experimental",
+// //   "available_start_time": "2022-01-01T19:00:00",
+// //   "end_time": "2022-01-01T20:30:00"
+// // }
+
+
 
 // UPDATE A BAND
 bands.put('/:id', async (req, res) => {
